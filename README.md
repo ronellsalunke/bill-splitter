@@ -16,6 +16,12 @@ Before running the application, you need to set up environment variables:
 
 2. Edit `.env` and configure the variables
 
+   Required:
+   - `GEMINI_API_KEY` for the default Gemini Developer API
+
+   Optional:
+   - `GEMINI_API_BASE` to send Gemini requests through a custom proxy URL.
+
 ### Spin up the services
 
 To run the bill-splitter application, use Docker Compose:

@@ -78,7 +78,13 @@ def get_bill_details_from_image(image_bytes: bytes, mime_type: str) -> str:
     :param image_bytes: The image bytes of the bill
     :return: Extracted bill details as an OCRBill object
     """
-    client = Client(api_key=settings.GEMINI_API_KEY)
+    if settings.GEMINI_API_BASE:
+        client = Client(
+            api_key=settings.GEMINI_API_KEY,
+            http_options=types.HttpOptions(base_url=settings.GEMINI_API_BASE),
+        )
+    else:
+        client = Client(api_key=settings.GEMINI_API_KEY)
 
     model = "gemini-2.5-flash"
     contents = [
