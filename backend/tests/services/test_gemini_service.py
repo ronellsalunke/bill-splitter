@@ -3,6 +3,7 @@ from typing import Any, Optional
 
 import pytest
 
+from app.core.settings import settings
 from app.services.gemini import get_bill_details_from_image
 from tests import examples
 
@@ -44,8 +45,9 @@ class MockGeminiClient:
             self.last_call = {"model": model, "contents": contents, "config": config}
             return self._response
 
-    def __init__(self, response: Optional[GeminiResponse]) -> None:
+    def __init__(self, response: Optional[GeminiResponse], **kwargs: Any) -> None:
         self.models = self.MockModels(response)
+        self.constructor_kwargs = kwargs
 
 
 def mock_gemini_client(monkeypatch: pytest.MonkeyPatch, response: Optional[GeminiResponse] = None) -> MockGeminiClient:
@@ -54,8 +56,20 @@ def mock_gemini_client(monkeypatch: pytest.MonkeyPatch, response: Optional[Gemin
     return that instance, and return the instance for optional inspection.
     """
     client_instance = MockGeminiClient(response)
-    monkeypatch.setattr("app.services.gemini.Client", lambda api_key, inst=client_instance: inst)
+
+    def mock_client_constructor(**kwargs: Any) -> MockGeminiClient:
+        client_instance.constructor_kwargs = kwargs
+        return client_instance
+
+    monkeypatch.setattr("app.services.gemini.Client", mock_client_constructor)
     return client_instance
+
+
+def assert_model_used(mock_client: MockGeminiClient, expected_model: str) -> None:
+    """Assert that generate_content was called with the expected model."""
+    last_call = mock_client.models.last_call
+    assert last_call is not None, "expected generate_content to be called"
+    assert last_call["model"] == expected_model
 
 
 class TestGetBillDetailsFromImage:
@@ -74,11 +88,7 @@ class TestGetBillDetailsFromImage:
 
         ocr_bill = get_bill_details_from_image(image_bytes=b"fake-image-bytes", mime_type="image/png")
 
-        # Verify the model used is the expected model
-        last_call = mock_client.models.last_call
-        assert last_call is not None, "expected generate_content to be called"
-        assert last_call["model"] == "gemini-2.5-flash"
-
+        assert_model_used(mock_client, settings.GEMINI_MODEL)
         assert ocr_bill == llm_success_response_text
 
     @pytest.mark.parametrize(
@@ -102,15 +112,53 @@ class TestGetBillDetailsFromImage:
     def test_errors_in_gemini_response(
         self, monkeypatch: pytest.MonkeyPatch, mock_response: GeminiResponse, error_message: str
     ):
-        # Mock the Gemini client to return an error response
         mock_client = mock_gemini_client(monkeypatch, mock_response)
 
         with pytest.raises(ValueError) as exc:
             get_bill_details_from_image(image_bytes=b"fake", mime_type="image/png")
 
         assert str(exc.value) == error_message
+        assert_model_used(mock_client, settings.GEMINI_MODEL)
 
-        # Verify the model used is the expected model
-        last_call = mock_client.models.last_call
-        assert last_call is not None, "expected generate_content to be called"
-        assert last_call["model"] == "gemini-2.5-flash"
+
+class TestGeminiClientConfiguration:
+    """Tests for custom Gemini API base URL and model configuration."""
+
+    success_response = GeminiResponse(
+        candidates=[
+            GeminiResponse.Candidate(
+                content=GeminiResponse.Content(
+                    parts=[
+                        GeminiResponse.Part(text='{"items": [], "amount_paid": 0, "tax_rate": 0, "service_charge": 0}')
+                    ]
+                )
+            )
+        ]
+    )
+
+    @pytest.mark.parametrize(
+        "custom_base_url, custom_model",
+        [
+            ("https://custom-gemini-proxy.example.com", None),
+            (None, "gemini-2.0-pro"),
+            ("https://custom-gemini-proxy.example.com", "gemini-2.0-pro"),
+        ],
+    )
+    def test_custom_configuration(
+        self, monkeypatch: pytest.MonkeyPatch, custom_base_url: Optional[str], custom_model: Optional[str]
+    ):
+        if custom_base_url:
+            monkeypatch.setattr("app.services.gemini.settings.GEMINI_API_BASE", custom_base_url)
+        if custom_model:
+            monkeypatch.setattr("app.services.gemini.settings.GEMINI_MODEL", custom_model)
+        mock_client = mock_gemini_client(monkeypatch, self.success_response)
+
+        get_bill_details_from_image(image_bytes=b"fake", mime_type="image/png")
+
+        if custom_base_url:
+            assert "http_options" in mock_client.constructor_kwargs
+            assert mock_client.constructor_kwargs["http_options"].base_url == custom_base_url
+        else:
+            assert "http_options" not in mock_client.constructor_kwargs
+
+        assert_model_used(mock_client, custom_model or settings.GEMINI_MODEL)

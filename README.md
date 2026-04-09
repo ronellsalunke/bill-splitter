@@ -14,7 +14,7 @@ Before running the application, you need to set up environment variables:
    cp .env.example .env
    ```
 
-2. Edit `.env` and configure the variables
+2. Edit `.env` and configure the variables as described in the example file.
 
 ### Spin up the services
 

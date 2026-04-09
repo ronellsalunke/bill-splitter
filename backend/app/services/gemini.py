@@ -9,7 +9,7 @@ Your task is to analyze the provided image of a bill and extract the following i
 Extract a Bill object with the following structure:
 - items: A list of items, where each item contains:
   - name: The name of the item (string, non-empty)
-  - price: The price of the item (float, must be positive)
+  - price: The price of the item (float, must be positive, skip items with 0 price)
   - quantity: The quantity ordered (integer, must be positive)
 - tax_rate: The tax rate applied to the bill as a decimal (float, between 0.0 and 1.0, default is 0.0 if not found)
 - service_charge: The service charge as a decimal (float, between 0.0 and 1.0, default is 0.0 if not found)
@@ -78,9 +78,15 @@ def get_bill_details_from_image(image_bytes: bytes, mime_type: str) -> str:
     :param image_bytes: The image bytes of the bill
     :return: Extracted bill details as an OCRBill object
     """
-    client = Client(api_key=settings.GEMINI_API_KEY)
+    if settings.GEMINI_API_BASE:
+        client = Client(
+            api_key=settings.GEMINI_API_KEY,
+            http_options=types.HttpOptions(base_url=settings.GEMINI_API_BASE),
+        )
+    else:
+        client = Client(api_key=settings.GEMINI_API_KEY)
 
-    model = "gemini-2.5-flash"
+    model = settings.GEMINI_MODEL
     contents = [
         types.Content(
             role="user",
