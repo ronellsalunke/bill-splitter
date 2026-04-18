@@ -4,22 +4,17 @@ import BillCard from "./BillCard";
 import BillModal from "./BillModal";
 import PaymentPlansView from "./PaymentPlansView";
 import EmptyState from "./EmptyState";
-import { useBillSplitter } from "../hooks/useBillSplitter";
+import { useBillStore } from "../stores/useBillStore";
 
 const BillSplitter = () => {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const {
     bills,
+    draft,
     paymentPlans,
     showModal,
     showResults,
     isUploading,
-    editingBillId,
-    paidBy,
-    taxRate,
-    serviceCharge,
-    amountPaid,
-    items,
     setPaidBy,
     setTaxRate,
     setServiceCharge,
@@ -37,7 +32,8 @@ const BillSplitter = () => {
     handleCalculateSplit,
     handleCloseModal,
     handleBackToBills,
-  } = useBillSplitter();
+  } = useBillStore();
+  const { editingBillId, paidBy, taxRate, serviceCharge, amountPaid, items } = draft;
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);

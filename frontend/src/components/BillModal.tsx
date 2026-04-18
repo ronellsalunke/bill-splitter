@@ -132,7 +132,8 @@ const BillModal = ({
             AMOUNT PAID
           </label>
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             value={amountPaid}
             onChange={(event) => onAmountPaidChange(event.target.value)}
             placeholder="0.00"
@@ -148,7 +149,8 @@ const BillModal = ({
               TAX (%)
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={taxRate}
               onChange={(event) => onTaxRateChange(event.target.value)}
               placeholder="5.0"
@@ -163,7 +165,8 @@ const BillModal = ({
               SERVICE (%)
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={serviceCharge}
               onChange={(event) => onServiceChargeChange(event.target.value)}
               placeholder="10.0"

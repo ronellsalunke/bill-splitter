@@ -42,7 +42,8 @@ const ItemForm = ({
 
         <div className="grid grid-cols-2 gap-4">
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             value={item.price || ""}
             onChange={(event) => onItemChange(index, "price", parseFloat(event.target.value) || 0)}
             placeholder="price"
@@ -51,7 +52,8 @@ const ItemForm = ({
             step="0.01"
           />
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
             value={item.quantity || ""}
             onChange={(event) => onItemChange(index, "quantity", parseInt(event.target.value, 10) || 1)}
             placeholder="qty"
